@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MAFF筆ポリゴンFGBデモ</title>
+</head>
+
+<body>
+  <div id="map"></div>
+  <!-- ローディングスピナー -->
+  <div id="loading-ui" class="absolute inset-0 z-50 flex items-center justify-center bg-white/70 hidden"
+    aria-label="読み込み中">
+    <div class="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

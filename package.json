@@ -1,0 +1,19 @@
+{
+  "name": "maff-fude-vectortiles",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.8",
+    "tailwindcss": "^4.1.8",
+    "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "maplibre-gl": "^5.5.0"
+  }
+}
