@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+    mvt-builder:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        volumes:
+            - ./input:/data/input:ro
+            - ./output:/data/output
+            - ./tiles:/data/tiles
+            - ./pipeline.sh:/data/pipeline.sh:ro
+        working_dir: /data
+        command: ["bash", "./pipeline.sh"]

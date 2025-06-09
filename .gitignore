@@ -1,3 +1,9 @@
+input/
+output/*.mbtiles
+output/*.pmtiles
+output/tiles/*
+!output/tiles/.gitkeep
+
 # Logs
 logs
 *.log
