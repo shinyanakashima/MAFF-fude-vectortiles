@@ -5,5 +5,5 @@ export default defineConfig({
     plugins: [
         tailwindcss(),
     ],
-    base: '/MAFF-fude/',
+    base: '/MAFF-fude-vectortiles/',
 });
