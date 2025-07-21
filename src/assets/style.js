@@ -13,7 +13,7 @@ export const style = {
         fude2024_pmtiles: {
             type: "vector",
             tiles: [
-                `pmtiles://https://zksdx.org/map/opendata/maff/fude_polygon/2024/tiles/maff-fude-2024_z14-17.pmtiles/{z}/{x}/{y}`, // ファイル名が「a.pmtiles」
+                `pmtiles://https://zksdx.org/map/opendata/maff/fude_polygon/tiles/maff-fude-2024_z14-17.pmtiles/{z}/{x}/{y}`, // ファイル名が「a.pmtiles」
             ],
             attribution: '<a href="https://github.com/shinyanakashima/MAFF-fude-vectortiles">MAFF-fude-vectortiles</a>',
             maxzoom: 16, // タイルの最大ズームを超えて拡大表示させるため
