@@ -1,21 +1,37 @@
 #!/bin/bash
+# 統合NDJSONからベクタタイル(MVT/ZXY, MBTiles, PMTiles)を生成します。
+#
+# 使い方:
+#   ./pipeline.sh [YEAR] [INPUT]
+#     YEAR : 年度 (例: 2024, 2025, 2026)。省略時は 2024
+#     INPUT: 入力NDJSONのパス。省略時は input/<YEAR>/01/merged_01.ndjson
+#
+# 環境変数 MINZOOM / MAXZOOM でズーム範囲を上書き可能（既定: 6 / 17）。
 set -e
 
-INPUT=input/01/merged_01.ndjson
-LAYER=maff-fude-2024
+YEAR="${1:-2024}"
+INPUT="${2:-input/${YEAR}/01/merged_01.ndjson}"
+LAYER=maff-fude-${YEAR}
 OUTDIR=output
 ZXYDIR=${OUTDIR}/tiles/${LAYER}
+MINZOOM="${MINZOOM:-6}"
+MAXZOOM="${MAXZOOM:-17}"
+
+if [ ! -f "$INPUT" ]; then
+  echo "❌ 入力NDJSONが存在しません: $INPUT"
+  exit 1
+fi
 
 mkdir -p "$OUTDIR" "$ZXYDIR"
 
-echo "▶ NDJSON → MVT (ZXY構造)"
+echo "▶ NDJSON → MVT (ZXY構造)  [年度: ${YEAR}]"
 tippecanoe -e "$ZXYDIR" \
   --read-parallel \
   -l "$LAYER" \
   --no-tile-size-limit \
   --drop-densest-as-needed \
-  --minimum-zoom=6 \
-  --maximum-zoom=17 \
+  --minimum-zoom="$MINZOOM" \
+  --maximum-zoom="$MAXZOOM" \
   "$INPUT"
 
 echo "▶ NDJSON → MBTiles"
@@ -24,8 +40,8 @@ tippecanoe -o "$OUTDIR/${LAYER}.mbtiles" \
   -l "$LAYER" \
   --no-tile-size-limit \
   --drop-densest-as-needed \
-  --minimum-zoom=6 \
-  --maximum-zoom=17 \
+  --minimum-zoom="$MINZOOM" \
+  --maximum-zoom="$MAXZOOM" \
   "$INPUT"
 
 # MVT→PMTiles変換（ZXYディレクトリ→pmtiles を使う場合はこちら）
@@ -34,4 +50,4 @@ tippecanoe -o "$OUTDIR/${LAYER}.mbtiles" \
 echo "▶ MBTiles → PMTiles"
 pmtiles convert "$OUTDIR/${LAYER}.mbtiles" "$OUTDIR/${LAYER}.pmtiles"
 
-echo "✅ 全て完了：MVT（ZXY）, MBTiles, PMTiles"
+echo "✅ 全て完了：MVT（ZXY）, MBTiles, PMTiles  [レイヤー: ${LAYER}]"
