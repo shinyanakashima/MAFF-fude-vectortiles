@@ -11,7 +11,12 @@ export const YEARS = [2026, 2025, 2024];
 // 既定年度（既存データが存在する年度）
 export const DEFAULT_YEAR = 2024;
 
-const PMTILES_BASE = "https://zksdx.org/map/opendata/maff/fude_polygon/tiles";
+// データ配信のベースURL。配信先の移行（例: Cloudflare R2）時はここ1箇所を差し替える。
+// ビルド時に VITE_DATA_BASE_URL を指定すれば上書き可能（末尾スラッシュは付けない）。
+const DATA_BASE_URL =
+    import.meta.env?.VITE_DATA_BASE_URL ??
+    "https://zksdx.org/map/opendata/maff/fude_polygon";
+const PMTILES_BASE = `${DATA_BASE_URL}/tiles`;
 
 // 年度ごとに一意なソースID・レイヤーID・source-layer名
 export const fudeSourceId = (year) => `fude${year}_pmtiles`;

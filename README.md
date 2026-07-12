@@ -7,7 +7,18 @@
 - ✅2026年度（データ配信され次第表示）
 
 ビューアの地図左上の年度セレクタで **2024 / 2025 / 2026** を切り替えられる。
-pmtilesは `https://zksdx.org/map/opendata/maff/fude_polygon/tiles/maff-fude-<YEAR>_z14-17.pmtiles` の形式で年度を埋め込む。
+pmtilesは `<BASE>/tiles/maff-fude-<YEAR>_z14-17.pmtiles` の形式で年度を埋め込む。
+
+### 配信先の切り替え（例: Cloudflare R2 へ移行）
+ベースURL(`<BASE>`)は `src/assets/style.js` の `DATA_BASE_URL` 定数で一元管理している。
+配信先を変える場合は、ビルド時に環境変数 `VITE_DATA_BASE_URL` を指定するだけでよい（末尾スラッシュ無し）。
+
+```bash
+# 例: R2のカスタムドメインへ切り替えてビルド
+VITE_DATA_BASE_URL="https://data.example.com/fude_polygon" pnpm build
+```
+
+未指定時は既定の配信サーバURLが使われる。
 
 ## 対応するVector Tiles
 - MVT
