@@ -24,6 +24,25 @@ pmtilesは `https://zksdx.org/map/opendata/maff/fude_polygon/tiles/maff-fude-<YE
 ./pipeline.sh 2026 input/2026/01/merged_01.ndjson
 ```
 
+## R2 へのアップロード
+生成した PMTiles を Cloudflare R2（`geo-opendata` バケット）へ配置する。レンサバ(Conoha)や CI から実行できる。
+
+```bash
+# 例: 2025年度・北海道(01) の output/maff-fude-2025.pmtiles をアップロード
+./upload_pmtiles_r2.sh 2025 01
+
+# 入力パスを明示する場合
+./upload_pmtiles_r2.sh 2025 01 output/maff-fude-2025.pmtiles
+```
+
+配置先キーは全フォーマット共通の階層に揃える。ファイル名にズーム範囲は含めない（URLの安定性のため。ズーム範囲は PMTiles のメタデータに保持される）。
+
+```
+geo-opendata/maff-fude/pmtiles/<YEAR>/fude_<YEAR>_<PREF>.pmtiles
+```
+
+前提ツールは [rclone](https://rclone.org/)（S3互換）。remote の設定方法（`rclone config` もしくは環境変数）は `upload_pmtiles_r2.sh` の先頭コメントを参照。
+
 ## 出典
 本プロジェクトでは「筆ポリゴン」の名称を用いていますが、農林水産省が公開する「[筆ポリゴン](https://open.fude.maff.go.jp/)」を独自に取得し、`FlatGeobuf`に変換したものです。
 
