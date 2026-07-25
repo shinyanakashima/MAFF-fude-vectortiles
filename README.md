@@ -27,12 +27,26 @@ pmtilesは `https://zksdx.org/map/opendata/maff/fude_polygon/tiles/maff-fude-<YE
 ## R2 へのアップロード
 生成した PMTiles を Cloudflare R2（`geo-opendata` バケット）へ配置する。レンサバ(Conoha)や CI から実行できる。
 
+Linux / macOS:
+
 ```bash
 # 例: 2025年度・北海道(01) の output/maff-fude-2025.pmtiles をアップロード
 ./upload_pmtiles_r2.sh 2025 01
 
 # 入力パスを明示する場合
 ./upload_pmtiles_r2.sh 2025 01 output/maff-fude-2025.pmtiles
+```
+
+Windows (PowerShell):
+
+```powershell
+# 転送せず宛先だけ確認
+.\upload_pmtiles_r2.ps1 -Year 2025 -Pref 01 -DryRun
+# 本番
+.\upload_pmtiles_r2.ps1 -Year 2025 -Pref 01
+
+# 入力パスを明示する場合
+.\upload_pmtiles_r2.ps1 -Year 2024 -Pref 01 -Path fude_2024_01.pmtiles
 ```
 
 配置先キーは全フォーマット共通の階層に揃える。ファイル名にズーム範囲は含めない（URLの安定性のため。ズーム範囲は PMTiles のメタデータに保持される）。
