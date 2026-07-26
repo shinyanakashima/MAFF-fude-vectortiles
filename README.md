@@ -6,7 +6,7 @@
 切り替えられる。
 
 PMTilesは Cloudflare R2（`geo-opendata` バケット）に置き、
-[MAFF-fude-API](https://github.com/shinyanakashima/MAFF-fude-API) がZXYタイルに変換して配信する。
+[筆ポリゴンAPI](https://maff-fude-api.it-zukosha.workers.dev/) がZXYタイルに変換して配信する。
 
 ```
 配信: https://maff-fude-api.it-zukosha.workers.dev/tiles/<YEAR>/<PREF>/{z}/{x}/{y}.mvt
@@ -105,4 +105,4 @@ geo-opendata/maff-fude/pmtiles/<YEAR>/fude_<YEAR>_<PREF>.pmtiles
 | リポジトリ | 役割 |
 | ---------- | ---- |
 | [MAFF-fude-dataset](https://github.com/shinyanakashima/MAFF-fude-dataset) | 元データ・FGB/Parquet生成・FGBビューア（旧 MAFF-fude-geojson / MAFF-fude-fgb） |
-| [MAFF-fude-API](https://github.com/shinyanakashima/MAFF-fude-API) | 筆ポリゴンAPI（bbox検索・タイル配信） |
+| MAFF-fude-API（非公開） | 筆ポリゴンAPI（bbox検索・タイル配信）。APIそのものは[公開](https://maff-fude-api.it-zukosha.workers.dev/) |
