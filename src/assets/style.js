@@ -1,38 +1,43 @@
 /**
  * MapLibre 用スタイル定義（コメント付き）
  *
- * 筆ポリゴンのベクタタイル(pmtiles)は年度ごとに配信される。
- * 年度をパスとファイル名・source-layer名に埋め込む共通フォーマットを使い、
- * 年度切替（main.js）でソース／レイヤーを差し替えられるようヘルパーを公開する。
+ * 筆ポリゴンのベクタタイルは、R2上のPMTilesを筆ポリゴンAPIがZXYに変換して配信する。
+ * 年度はURLパスで切り替える。年度切替（main.js）でソース／レイヤーを
+ * 差し替えられるようヘルパーを公開する。
  */
 
-// 対応年度（新しい順）。配信され次第表示される。
+// 対応年度（新しい順）
 export const YEARS = [2026, 2025, 2024];
-// 既定年度（既存データが存在する年度）
-export const DEFAULT_YEAR = 2024;
+export const DEFAULT_YEAR = 2026;
+// 都道府県コード（北海道）
+const PREF = "01";
 
-const PMTILES_BASE = "https://zksdx.org/map/opendata/maff/fude_polygon/tiles";
+// 筆ポリゴンAPI。ビルド時に VITE_API_BASE で差し替えられる。
+const API_BASE =
+    import.meta.env?.VITE_API_BASE ??
+    "https://maff-fude-api.it-zukosha.workers.dev";
 
-// 年度ごとに一意なソースID・レイヤーID・source-layer名
-export const fudeSourceId = (year) => `fude${year}_pmtiles`;
+// 年度ごとに一意なソースID・レイヤーID
+export const fudeSourceId = (year) => `fude${year}_tiles`;
 export const fudeLayerId = (year) => `fude${year}-polygon`;
-export const fudeSourceLayer = (year) => `maff-fude-${year}`;
+// source-layer はタイル側で年度非依存の固定名になった
+export const FUDE_SOURCE_LAYER = "fude";
 
 // 指定年度のベクタタイルソース定義
 export const buildFudeSource = (year) => ({
     type: "vector",
-    tiles: [
-        `pmtiles://${PMTILES_BASE}/maff-fude-${year}_z14-17.pmtiles/{z}/{x}/{y}`,
-    ],
+    tiles: [`${API_BASE}/tiles/${year}/${PREF}/{z}/{x}/{y}.mvt`],
     attribution: '<a href="https://github.com/shinyanakashima/MAFF-fude-vectortiles">MAFF-fude-vectortiles</a>',
-    maxzoom: 16, // タイルの最大ズームを超えて拡大表示させるため
+    // タイルの実体は z6-17。maxzoomを超えた分はオーバーズームで表示する
+    minzoom: 6,
+    maxzoom: 17,
 });
 
 // 指定年度のポリゴンレイヤー定義
 export const buildFudeLayer = (year) => ({
     'id': fudeLayerId(year),
     'source': fudeSourceId(year),
-    'source-layer': fudeSourceLayer(year),
+    'source-layer': FUDE_SOURCE_LAYER,
     'type': 'fill',
     'paint': {
         "fill-color": [

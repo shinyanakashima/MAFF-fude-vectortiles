@@ -11,14 +11,11 @@ import {
 } from './assets/style.js';
 
 import maplibregl from 'maplibre-gl';
-import { Protocol } from 'pmtiles';
 
-const protocol = new Protocol();
-maplibregl.addProtocol('pmtiles', protocol.tile);
 const map = new maplibregl.Map({
   container: "map",
   style,
-  center: [143.15950914681895, 42.92919045913274], // 初期位置
+  center: [143.20, 42.90], // 初期位置（帯広近郊の農地帯）
   zoom: 15,
   minZoom: 14,
   maxZoom: 18,

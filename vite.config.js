@@ -5,5 +5,6 @@ export default defineConfig({
     plugins: [
         tailwindcss(),
     ],
-    base: '/MAFF-fude-vectortiles/',
+    // 相対パスで出力する（fgbビューアと同方針。サブパス配下でもリポジトリ名に依存しない）
+    base: './',
 });
