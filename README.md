@@ -2,12 +2,19 @@
 農水省の[筆ポリゴン](https://www.maff.go.jp/j/tokei/porigon/)の`vectortiles`による可視化、データセット。
 
 # Data
-- ✅[2024年度](https://github.com/shinyanakashima/MAFF-fude-vectortiles/releases/)
-- ✅2025年度
-- ✅2026年度（データ配信され次第表示）
+2024 / 2025 / 2026年度の**北海道（`01`）**を整備済み。ビューアの地図左上の年度セレクタで
+切り替えられる。
 
-ビューアの地図左上の年度セレクタで **2024 / 2025 / 2026** を切り替えられる。
-pmtilesは `https://zksdx.org/map/opendata/maff/fude_polygon/tiles/maff-fude-<YEAR>_z14-17.pmtiles` の形式で年度を埋め込む。
+PMTilesは Cloudflare R2（`geo-opendata` バケット）に置き、
+[MAFF-fude-API](https://github.com/shinyanakashima/MAFF-fude-API) がZXYタイルに変換して配信する。
+
+```
+配信: https://maff-fude-api.it-zukosha.workers.dev/tiles/<YEAR>/<PREF>/{z}/{x}/{y}.mvt
+実体: geo-opendata/maff-fude/pmtiles/<YEAR>/fude_<YEAR>_<PREF>.pmtiles
+```
+
+タイルのレイヤー名は年度を含まない固定名 `fude`。年度はURLで切り替えるため、
+スタイル定義の`source-layer`を年度ごとに書き換える必要はない。
 
 ## 対応するVector Tiles
 - MVT
@@ -93,8 +100,9 @@ geo-opendata/maff-fude/pmtiles/<YEAR>/fude_<YEAR>_<PREF>.pmtiles
 ## 免責
 コンテンツの完全性・正確性・有用性・安全性等について利用者に対し一切の保証をしません。
 
-# Related project
-## 🗄️Vector Data
-`FlatGeobuf`での可視化。
+# 関連リポジトリ
 
-[MAFF-fude-fgb](https://github.com/shinyanakashima/MAFF-fude-fgb)
+| リポジトリ | 役割 |
+| ---------- | ---- |
+| [MAFF-fude-dataset](https://github.com/shinyanakashima/MAFF-fude-dataset) | 元データ・FGB/Parquet生成・FGBビューア（旧 MAFF-fude-geojson / MAFF-fude-fgb） |
+| [MAFF-fude-API](https://github.com/shinyanakashima/MAFF-fude-API) | 筆ポリゴンAPI（bbox検索・タイル配信） |
