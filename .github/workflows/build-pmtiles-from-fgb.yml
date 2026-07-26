@@ -1,0 +1,165 @@
+# R2上のFGBからPMTilesを生成し、R2へ戻すワークフロー。
+#
+# 元データ(農水省の配布GeoJSON)を再取得する必要がなく、R2のFGBだけで完結する。
+#
+# 事前設定 (Settings > Secrets and variables > Actions):
+#   R2_ACCESS_KEY_ID     : R2 APIトークンのAccess Key ID
+#   R2_SECRET_ACCESS_KEY : 同 Secret Access Key
+#   R2_ENDPOINT          : https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+#
+# 入出力キー:
+#   in : geo-opendata/maff-fude/fgb/<year>/<pref>/fude_<year>_<pref>.fgb
+#   out: geo-opendata/maff-fude/pmtiles/<year>/fude_<year>_<pref>.pmtiles
+name: Build PMTiles from FGB
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "年度 (例: 2024)"
+        required: true
+        default: "2024"
+      prefs:
+        description: '対象の都道府県コード。カンマ区切り (例: "01,13") または "all" で01〜47'
+        required: true
+        default: "01"
+      minzoom:
+        description: "最小ズーム"
+        required: false
+        default: "6"
+      maxzoom:
+        description: "最大ズーム"
+        required: false
+        default: "17"
+
+env:
+  BUCKET: geo-opendata
+  DATASET: maff-fude
+  # タイルのレイヤー名は年度を含めない固定名にする（スタイル定義を年度ごとに書き換えずに済む）
+  LAYER: fude
+
+jobs:
+  # 入力文字列を matrix 用のJSON配列に展開する
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      prefs: ${{ steps.expand.outputs.prefs }}
+    steps:
+      - id: expand
+        run: |
+          if [ "${{ inputs.prefs }}" = "all" ]; then
+            list=$(seq -w 1 47 | paste -sd, -)
+          else
+            list="${{ inputs.prefs }}"
+          fi
+          json=$(echo "$list" | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -E '^[0-9]{2}$' \
+                 | jq -R . | jq -sc .)
+          echo "prefs=$json" >> "$GITHUB_OUTPUT"
+          echo "対象: $json"
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      # 同時実行数を抑えてR2への負荷とランナー枯渇を避ける
+      max-parallel: 5
+      matrix:
+        pref: ${{ fromJson(needs.prepare.outputs.prefs) }}
+    steps:
+      - name: ディスク空き容量を確保
+        run: |
+          # 大きい県では中間ファイルが10GB近くなるため、不要なプリインストールを削除
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          df -h / | tail -1
+
+      - name: ツール導入 (GDAL / rclone / pmtiles)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gdal-bin
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+          curl -fsSL "https://github.com/protomaps/go-pmtiles/releases/download/v1.28.0/go-pmtiles_1.28.0_Linux_x86_64.tar.gz" \
+            | tar xz pmtiles
+          sudo mv pmtiles /usr/local/bin/ && sudo chmod +x /usr/local/bin/pmtiles
+          ogr2ogr --version && rclone version | head -1 && pmtiles version
+
+      - name: tippecanoe をビルド
+        run: |
+          sudo apt-get install -y --no-install-recommends build-essential libsqlite3-dev zlib1g-dev
+          git clone --depth 1 https://github.com/felt/tippecanoe.git /tmp/tippecanoe-src
+          make -C /tmp/tippecanoe-src -j"$(nproc)"
+          sudo make -C /tmp/tippecanoe-src install
+          tippecanoe --version
+
+      - name: rclone 設定
+        env:
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_REGION: auto
+          RCLONE_CONFIG_R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: rclone lsd "r2:${BUCKET}/${DATASET}/" >/dev/null && echo "R2 疎通OK"
+
+      - name: FGB を取得 → PMTiles を生成 → R2 へ配置
+        env:
+          RCLONE_CONFIG_R2_TYPE: s3
+          RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+          RCLONE_CONFIG_R2_REGION: auto
+          RCLONE_CONFIG_R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          # バケット作成権限を持たないスコープ付きトークンで必要
+          RCLONE_S3_NO_CHECK_BUCKET: "true"
+        run: |
+          set -euo pipefail
+          YEAR="${{ inputs.year }}"
+          PREF="${{ matrix.pref }}"
+          SRC="r2:${BUCKET}/${DATASET}/fgb/${YEAR}/${PREF}/fude_${YEAR}_${PREF}.fgb"
+          DST="r2:${BUCKET}/${DATASET}/pmtiles/${YEAR}/fude_${YEAR}_${PREF}.pmtiles"
+
+          if ! rclone lsf "$SRC" >/dev/null 2>&1; then
+            echo "::warning::FGBが存在しないためスキップ: ${YEAR}/${PREF}"
+            exit 0
+          fi
+
+          echo "::group::FGB ダウンロード"
+          rclone copyto --stats 30s --stats-one-line "$SRC" "fude.fgb"
+          ls -lh fude.fgb
+          echo "::endgroup::"
+
+          echo "::group::FGB → NDJSON"
+          ogr2ogr -f GeoJSONSeq fude.ndjson fude.fgb
+          rm -f fude.fgb          # 以降不要。ディスクを解放する
+          ls -lh fude.ndjson
+          echo "::endgroup::"
+
+          echo "::group::NDJSON → MBTiles"
+          tippecanoe -o fude.mbtiles -l "${LAYER}" \
+            --read-parallel --no-tile-size-limit --drop-densest-as-needed \
+            --minimum-zoom="${{ inputs.minzoom }}" --maximum-zoom="${{ inputs.maxzoom }}" \
+            --force fude.ndjson
+          rm -f fude.ndjson
+          ls -lh fude.mbtiles
+          echo "::endgroup::"
+
+          echo "::group::MBTiles → PMTiles"
+          pmtiles convert fude.mbtiles fude.pmtiles
+          rm -f fude.mbtiles
+          ls -lh fude.pmtiles
+          echo "::endgroup::"
+
+          echo "::group::R2 へアップロード"
+          rclone copyto --stats 30s --stats-one-line fude.pmtiles "$DST"
+          echo "::endgroup::"
+
+          # サイズ突合による検証
+          local_size=$(stat -c%s fude.pmtiles)
+          remote_size=$(rclone size "$DST" --json | sed 's/.*"bytes":\([0-9]*\).*/\1/')
+          if [ "$local_size" != "$remote_size" ]; then
+            echo "::error::サイズ不一致 local=${local_size} remote=${remote_size}"
+            exit 1
+          fi
+          echo "✅ ${YEAR}/${PREF} 完了 (${local_size} バイト)"

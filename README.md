@@ -24,6 +24,65 @@ pmtilesは `https://zksdx.org/map/opendata/maff/fude_polygon/tiles/maff-fude-<YE
 ./pipeline.sh 2026 input/2026/01/merged_01.ndjson
 ```
 
+## R2のFGBからPMTilesを生成（GitHub Actions）
+既に R2 へ配置済みの FGB を入力に、PMTiles を生成して R2 へ戻すワークフロー
+（`.github/workflows/build-pmtiles-from-fgb.yml`）。農水省からの元データ再取得は不要。
+
+```
+R2の FGB → ogr2ogr(NDJSON) → tippecanoe(MBTiles) → pmtiles convert → R2
+```
+
+Actions タブから `Build PMTiles from FGB` を実行し、年度と都道府県コードを指定する。
+
+| 入力 | 例 | 説明 |
+| --- | --- | --- |
+| `year` | `2024` | 年度 |
+| `prefs` | `01` / `01,13` / `all` | 対象県。`all` で01〜47を並列処理 |
+| `minzoom` / `maxzoom` | `6` / `17` | ズーム範囲 |
+
+事前に Secrets へ以下を登録する（R2 APIトークンは `geo-opendata` バケット限定・Object Read & Write）。
+
+| Secret | 値 |
+| --- | --- |
+| `R2_ACCESS_KEY_ID` | Access Key ID |
+| `R2_SECRET_ACCESS_KEY` | Secret Access Key |
+| `R2_ENDPOINT` | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
+
+出力は `maff-fude/pmtiles/<YEAR>/fude_<YEAR>_<PREF>.pmtiles`。アップロード後にサイズ突合で検証する。
+
+## R2 へのアップロード
+生成した PMTiles を Cloudflare R2（`geo-opendata` バケット）へ配置する。レンサバ(Conoha)や CI から実行できる。
+
+Linux / macOS:
+
+```bash
+# 例: 2025年度・北海道(01) の output/maff-fude-2025.pmtiles をアップロード
+./upload_pmtiles_r2.sh 2025 01
+
+# 入力パスを明示する場合
+./upload_pmtiles_r2.sh 2025 01 output/maff-fude-2025.pmtiles
+```
+
+Windows (PowerShell):
+
+```powershell
+# 転送せず宛先だけ確認
+.\upload_pmtiles_r2.ps1 -Year 2025 -Pref 01 -DryRun
+# 本番
+.\upload_pmtiles_r2.ps1 -Year 2025 -Pref 01
+
+# 入力パスを明示する場合
+.\upload_pmtiles_r2.ps1 -Year 2024 -Pref 01 -Path fude_2024_01.pmtiles
+```
+
+配置先キーは全フォーマット共通の階層に揃える。ファイル名にズーム範囲は含めない（URLの安定性のため。ズーム範囲は PMTiles のメタデータに保持される）。
+
+```
+geo-opendata/maff-fude/pmtiles/<YEAR>/fude_<YEAR>_<PREF>.pmtiles
+```
+
+前提ツールは [rclone](https://rclone.org/)（S3互換）。remote の設定方法（`rclone config` もしくは環境変数）は `upload_pmtiles_r2.sh` の先頭コメントを参照。
+
 ## 出典
 本プロジェクトでは「筆ポリゴン」の名称を用いていますが、農林水産省が公開する「[筆ポリゴン](https://open.fude.maff.go.jp/)」を独自に取得し、`FlatGeobuf`に変換したものです。
 
